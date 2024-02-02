@@ -38,8 +38,8 @@ def play_img_file_path(instance, filename):
 class Play(models.Model):
     title = models.CharField(max_length=63, null=False, unique=True)
     description = models.TextField()
-    actors = models.ManyToManyField(Actor, related_name="plays")
-    genres = models.ManyToManyField(Genre, related_name="genres")
+    actors = models.ManyToManyField(Actor, related_name="plays", blank=True)
+    genres = models.ManyToManyField(Genre, related_name="genres", blank=True)
     image = models.ImageField(null=True, upload_to=play_img_file_path)
 
     def __str__(self):
