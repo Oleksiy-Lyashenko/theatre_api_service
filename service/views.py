@@ -1,14 +1,11 @@
 from django.db.models import Count, F
-from django.http import Http404
-from django.shortcuts import render
 from drf_spectacular.utils import extend_schema, OpenApiParameter
-from rest_framework import status, generics, mixins, viewsets
-from rest_framework.decorators import api_view, action
+from rest_framework import status, viewsets
+from rest_framework.decorators import action
 from rest_framework.pagination import PageNumberPagination
-from rest_framework.permissions import IsAuthenticated, IsAdminUser
+from rest_framework.permissions import IsAdminUser
 from rest_framework.response import Response
-from rest_framework.views import APIView
-from rest_framework.authentication import TokenAuthentication
+from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from service.models import Actor, Genre, Play, Performance, TheatreHall, Ticket, Reservation
 from service.serializers import (
@@ -25,187 +22,29 @@ from service.serializers import (
     TicketSerializer,
     TicketListSerializer,
     ReservationSerializer,
-    ReservationListSerializer
+    ReservationDetailSerializer
 )
 from user.permissions import IsAdminOrIfAuthenticatedReadOnly
 
 
-# Create your views here.
-
-# FBV
-# @api_view([type of requests]) user rest_framework for beautiful show all these requests
-@api_view(["GET", "POST"])
-def actor_list(request):
-    if request.method == "GET":
-        actors = Actor.objects.all()
-        serializer = ActorSerializer(actors, many=True)
-        # return JsonResponse(serializer.data, status=200, safe=False)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
-    if request.method == "POST":
-        serializer = ActorSerializer(data=request.data)
-
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-# CBV - APIView
-class ActorListAPI(APIView):
-    def get(self, request):
-        actors = Actor.objects.all()
-        serializer = ActorSerializer(actors, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
-    def post(self, request):
-        serializer = ActorSerializer(data=request.data)
-
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-# CBV - generic with mixins
-class ActorListGeneric(
-    mixins.ListModelMixin,
-    mixins.CreateModelMixin,
-    generics.GenericAPIView
-):
-    queryset = Actor.objects.all()
-    serializer_class = ActorSerializer
-
-    def get(self, request, *args, **kwargs):
-        return self.list(request, *args, **kwargs)
-
-    def post(self, request):
-        serializer = self.serializer_class(data=request.data)
-
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-# CBV - generic has the same methods like mixins for list
-class ActorListGenericWithMixins(generics.ListCreateAPIView):
-    queryset = Actor.objects.all()
-    serializer_class = ActorSerializer
-
-
-
-@api_view(["GET", "POST", "DELETE"])
-def actor_detail(request, pk):
-    try:
-        actor = Actor.objects.get(pk=pk)
-    except Actor.DoesNotExist:
-        return Response(status=status.HTTP_404_NOT_FOUND)
-
-    if request.method == "GET":
-        serializer = ActorSerializer(actor)
-        return Response(serializer.data)
-
-    elif request.method == "PUT":
-        serializer = ActorSerializer(actor, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    elif request.method == "DELETE":
-        actor.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
-
-# CBV - APIView
-class ActorDetailAPI(APIView):
-    def get_object(self, pk):
-        try:
-            return Actor.objects.get(pk=pk)
-        except Actor.DoesNotExist:
-            raise Http404
-
-    def get(self, request, pk):
-        actor = self.get_object(pk)
-        serializer = ActorSerializer(actor)
-        return Response(serializer.data)
-
-    def put(self, request, pk):
-        actor = self.get_object(pk)
-        serializer = ActorSerializer(actor, data=request.data)
-
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    def delete(self, request, pk):
-        actor = self.get_object(pk)
-        actor.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
-
-# #CBV - generic
-class ActorDetailGeneric(
-    mixins.RetrieveModelMixin,
-    mixins.UpdateModelMixin,
-    mixins.DestroyModelMixin,
-    generics.GenericAPIView
-):
-    queryset = Actor.objects.all()
-    serializer_class = ActorSerializer
-
-    def get(self, *args, **kwargs):
-        return self.retrieve(*args, **kwargs)
-
-    def put(self, *args, **kwargs):
-        return self.update(*args, **kwargs)
-
-    def delete(self, request, *args, **kwargs):
-        return self.destroy(*args, **kwargs)
-
-
-# CBV - generic with mixins
-class ActorDetailGenericWithMixins(generics.RetrieveUpdateDestroyAPIView):
-    queryset = Actor.objects.all()
-    serializer_class = ActorSerializer
-
-
-# CBV - viewsets create one view for list and detail with low code
-class ActorViewSet(
-    mixins.CreateModelMixin,
-    mixins.ListModelMixin,
-    mixins.RetrieveModelMixin,
-    mixins.UpdateModelMixin,
-    mixins.DestroyModelMixin,
-    viewsets.GenericViewSet
-):
-    queryset = Actor.objects.all()
-    serializer_class = ActorSerializer
-
-
-# CBV - create all methods for list and detail
 class ActorModelViewSet(viewsets.ModelViewSet):
     queryset = Actor.objects.all()
     serializer_class = ActorSerializer
+    authentication_classes = (JWTAuthentication, )
     permission_classes = (IsAdminOrIfAuthenticatedReadOnly,)
 
 
 class GenreModelViewSet(viewsets.ModelViewSet):
     queryset = Genre.objects.all()
     serializer_class = GenreSerializer
+    authentication_classes = (JWTAuthentication, )
     permission_classes = (IsAdminOrIfAuthenticatedReadOnly,)
 
 
 class PlayModelViewSet(viewsets.ModelViewSet):
     queryset = Play.objects.all().prefetch_related("actors", "genres")
     serializer_class = PlaySerializer
+    authentication_classes = (JWTAuthentication, )
     permission_classes = (IsAdminOrIfAuthenticatedReadOnly,)
 
     @staticmethod
@@ -266,6 +105,7 @@ class PlayModelViewSet(viewsets.ModelViewSet):
 class PerformanceModelViewSet(viewsets.ModelViewSet):
     queryset = Performance.objects.all().select_related("play", "theatre_hall")
     serializer_class = PerformanceSerializer
+    authentication_classes = (JWTAuthentication, )
     permission_classes = (IsAdminOrIfAuthenticatedReadOnly,)
 
     def get_serializer_class(self):
@@ -294,12 +134,14 @@ class PerformanceModelViewSet(viewsets.ModelViewSet):
 class TheatreHallModelViewSet(viewsets.ModelViewSet):
     queryset = TheatreHall.objects.all()
     serializer_class = TheatreHallSerializer
+    authentication_classes = (JWTAuthentication, )
     permission_classes = (IsAdminOrIfAuthenticatedReadOnly,)
 
 
 class TicketModelView(viewsets.ModelViewSet):
     queryset = Ticket.objects.all().select_related("performance")
     serializer_class = TicketSerializer
+    authentication_classes = (JWTAuthentication, )
     permission_classes = (IsAdminOrIfAuthenticatedReadOnly,)
 
     def get_serializer_class(self):
@@ -324,12 +166,11 @@ class ReservationModelView(viewsets.ModelViewSet):
         return self.queryset.filter(user=self.request.user)
 
     def get_serializer_class(self):
-        if self.action == "list":
-            return ReservationListSerializer
+
+        if self.action == "retrieve":
+            return ReservationDetailSerializer
 
         return ReservationSerializer
 
-    # use for creation method post
-    # only one user can create reservation for yourself
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)

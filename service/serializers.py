@@ -1,4 +1,3 @@
-import serializer
 from django.db import transaction
 from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
@@ -6,31 +5,11 @@ from rest_framework.validators import UniqueTogetherValidator
 from service.models import Actor, Genre, Play, Performance, TheatreHall, Ticket, Reservation
 
 
-# Standard implementation serializer
-class ActorSerializerStandart(serializers.Serializer):
-    id = serializers.IntegerField(read_only=True)
-    first_name = serializers.CharField(max_length=63)
-    last_name = serializers.CharField(max_length=63)
-
-    def create(self, validated_data):
-        return Actor.objects.create(**validated_data)
-
-    def update(self, instance, validated_data):
-        instance.first_name = validated_data.get("first_name", instance.first_name)
-        instance.last_name = validated_data.get("last_name", instance.last_name)
-        instance.save()
-        return instance
-
-
-# ModelSerializer has methods create and update, you need only model for serializer
 class ActorSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Actor
-
-        # can add different field of model ("first_name",)
         fields = ("id", "first_name", "last_name", "full_name")
-        read_only_fields = ("first_name", "last_name")
 
 
 class GenreSerializer(serializers.ModelSerializer):
@@ -137,7 +116,6 @@ class ReservationSerializer(serializers.ModelSerializer):
         model = Reservation
         fields = ("id", "created_at", "tickets")
 
-    # can create reservation thorough reservation (read in rest lib writable nested serializer )
     def create(self, validated_data):
         with transaction.atomic():
             tickets_data = validated_data.pop('tickets')
@@ -147,6 +125,5 @@ class ReservationSerializer(serializers.ModelSerializer):
             return reservation
 
 
-class ReservationListSerializer(ReservationSerializer):
+class ReservationDetailSerializer(ReservationSerializer):
     tickets = TicketListSerializer(many=True, read_only=True)
-
