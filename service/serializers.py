@@ -36,6 +36,10 @@ class PlayListSerializer(PlaySerializer):
         slug_field="name"
     )
 
+    class Meta:
+        model = Play
+        fields = ("id", "title", "description", "actors", "genres", "image")
+
 
 class PlayDetailSerializer(PlaySerializer):
     actors = ActorSerializer(many=True)
