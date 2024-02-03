@@ -16,9 +16,8 @@ router = routers.DefaultRouter()
 router.register("actors", ActorModelViewSet)
 router.register("genres", GenreModelViewSet)
 router.register("plays", PlayModelViewSet)
-router.register("performances", PerformanceModelViewSet)
 router.register("theaters", TheatreHallModelViewSet)
-router.register("ticket", TicketModelView)
+router.register("performances", PerformanceModelViewSet)
 router.register("reservations", ReservationModelView)
 
 

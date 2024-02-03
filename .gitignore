@@ -25,7 +25,7 @@ media
 
 # Distribution / packaging
 .Python
-.idea
+.idea/
 .DS_Store
 build/
 develop-eggs/
